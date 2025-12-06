@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚽ Neon Football Hangman</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+  body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background: radial-gradient(circle at top, #0a0f24, #1a1f3c);
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  #gameContainer {
+    background: rgba(255,255,255,0.05);
+    padding: 30px 40px;
+    border-radius: 25px;
+    max-width: 700px;
+    width: 90%;
+    box-shadow: 0 0 50px #00d4ff66;
+    text-align: center;
+    backdrop-filter: blur(10px);
+  }
+
+  h1 {
+    color: #00d4ff;
+    font-size: 2.2em;
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px #00d4ff, 0 0 20px #00d4ff66;
+  }
+
+  #stages {
+    font-family: monospace;
+    font-size: 1.2em;
+    white-space: pre;
+    margin-bottom: 20px;
+    line-height: 1.2em;
+    color: #00ffe1;
+    text-shadow: 0 0 5px #00ffe1;
+  }
+
+  #wordDisplay {
+    font-size: 2em;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  .letter-slot {
+    display: inline-block;
+    width: 30px;
+    margin: 0 5px;
+    border-bottom: 3px solid #00d4ff;
+    text-transform: uppercase;
+    font-weight: bold;
+    transition: all 0.2s;
+  }
+
+  .space-slot {
+    width: 20px;
+    margin: 0 5px;
+  }
+
+  #lives {
+    font-size: 1.2em;
+    margin-bottom: 15px;
+    color: #ff6b6b;
+    text-shadow: 0 0 5px #ff6b6b;
+  }
+
+  #message {
+    font-weight: bold;
+    margin-bottom: 20px;
+    font-size: 1.2em;
+    min-height: 1.5em;
+    color: #fff200;
+    text-shadow: 0 0 5px #fff200;
+  }
+
+  #letters {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  button.letter {
+    margin: 5px;
+    padding: 10px 15px;
+    border-radius: 10px;
+    background: #00d4ff;
+    border: none;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+    text-transform: uppercase;
+    box-shadow: 0 0 10px #00d4ff66;
+  }
+
+  button.letter:hover:not(:disabled) {
+    background: #00a6c7;
+    box-shadow: 0 0 15px #00a6c7;
+  }
+
+  button.letter:disabled {
+    background: #555;
+    cursor: default;
+    box-shadow: none;
+  }
+
+</style>
+</head>
+<body>
+
+<div id="gameContainer">
+  <h1>⚽ Neon Football Hangman</h1>
+  <div id="stages"></div>
+  <div id="wordDisplay"></div>
+  <div id="lives"></div>
+  <div id="message"></div>
+  <div id="letters"></div>
+</div>
+
+<script>
+const wordList = [
+  // General players
+  'kylian mbappe',
+  'erling haaland',
+  'bukayo saka',
+  'jamal musiala',
+  'jude bellingham',
+  'pablo gavi',
+  'pedri gonzalez',
+  'ansu fati',
+  'aurelien tchouameni',
+  'xavi simons',
+  'florian wirtz',
+  'eduardo camavinga',
+  'rayan cherki',
+  'rafael leao',
+  'alejandro balde',
+  'federico valverde',
+  'nico williams',
+  'endrick felipe',
+  'lautaro martinez',
+  'franco mastantuono',
+  'lamine yamal',
+  'cole palmer',
+  'michael olise',
+  'jarell quansah',
+  'jobe bellingham',
+  'lionel messi',
+  'cristiano ronaldo',
+  'bruno fernandes',
+  'benjamin sesko',
+  'andy robertson',
+  'neymar jr',
+  'robert lewandowski',
+  'luka modric',
+  'toni kroos',
+  'paul pogba',
+  'kevin de bruyne',
+  'virgil van dijk',
+  'mohamed salah',
+  'sadio mane',
+  'karim benzema',
+  'sergio ramos',
+  'david beckham',
+  'zinedine zidane',
+  'ronaldinho gaucho',
+  'ronaldo nazario',
+  'thierry henry',
+  'ricardo kaka',
+  'francesco totti',
+  'paolo maldini',
+  'roberto carlos',
+  'gianluigi buffon',
+  'andres iniesta',
+  'xavi hernandez',
+  'david villa',
+  'diego maradona',
+  'johan cruyff',
+
+  // Real Madrid
+  'vinicius junior',
+  'trent alexander-arnold',
+  'thibaut courtois',
+  'antonio rudiger',
+  'david alaba',
+
+  // FC Barcelona
+  'raphinha',
+  'marcus rashford',
+  'francisco trincao',
+  'joao felix',
+
+  // PSG
+  'ousmane dembele',
+  'achraf hakimi',
+  'marquinhos',
+  'vitinha',
+  'gianluigi donnarumma',
+  'marco verratti',
+
+  // Bayern Munich
+  'matthijs de ligt',
+  'alphonso davies',
+  'serge gnabry',
+  'leroy sane',
+  'joshua kimmich',
+  'dayot upamecano',
+  'thomas muller',
+  'manuel neuer',
+  'leon goretzka',
+
+  // Borussia Dortmund
+  'nico schlotterbeck',
+  'donyell malen',
+  'mats hummels',
+  'julian brandt',
+  'youssoufa mouna',
+  'emre can',
+  'sebastien haller',
+  'marco reus',
+
+  // Liverpool
+  'luis diaz',
+  'harvey elliott',
+  'alisson becker',
+  'darwin nunez',
+  'fabinho',
+  'jordan henderson',
+
+  // Manchester City
+  'phil foden',
+  'bernardo silva',
+  'ederson',
+  'rodri',
+  'ilkay gundogan',
+  'jack grealish',
+  'julian alvarez',
+  'manchester city defender',
+
+  // Manchester United
+  'casemiro',
+  'alejandro garnacho',
+  'david de gea',
+  'raphael varane',
+  'antony',
+  'harry maguire',
+  'fred',
+
+  // Arsenal
+  'martin odegaard',
+  'william saliba',
+  'declan rice',
+  'gabriel martinelli',
+  'aaron ramsdale',
+  'ben white',
+  'marquinhos arsenal',
+  'fabio vieira',
+  'kieran tierney',
+
+  // Chelsea
+  'reece james',
+  'enzo fernandez',
+  'mason mount',
+  'levi colwill',
+  'conor gallagher',
+  'kai havertz',
+  'cesar azpilicueta',
+  'marcus bettini',
+  'nicolas jackson',
+
+  // Juventus
+  'dusan vlahovic',
+  'federico chiesa',
+  'adrien rabiot',
+  'wojciech szczesny',
+  'gleison bremer',
+  'paulo dybala',
+  'fabio miretti',
+  'alejandro kaku',
+  'michy batshuayi',
+
+  // Inter Milan
+  'nicolo barella',
+  'milan skriniar',
+  'federico dimarco',
+  'yann sommer',
+  'henrikh mkhitaryan',
+  'eden hazard',
+  'alessandro bastoni',
+  'stevan jovetic',
+  'samir handanovic',
+
+  // AC Milan
+  'theo hernandez',
+  'sandro tonali',
+  'mike maignan',
+  'christian pulisic',
+  'oliver giroud',
+  'franco messias',
+  'diogo dalot',
+  'marcus therien',
+  'zaid chen'
+];
+
+const stages = [
+`  +---+
+  |   |
+  O   |
+ /|\\  |
+ / \\  |
+      |
+=========`,
+`  +---+
+  |   |
+  O   |
+ /|\\  |
+ /    |
+      |
+=========`,
+`  +---+
+  |   |
+  O   |
+ /|\\  |
+      |
+      |
+=========`,
+`  +---+
+  |   |
+  O   |
+ /|   |
+      |
+      |
+=========`,
+`  +---+
+  |   |
+  O   |
+  |   |
+      |
+      |
+=========`,
+`  +---+
+  |   |
+  O   |
+      |
+      |
+      |
+=========`,
+`  +---+
+  |   |
+      |
+      |
+      |
+      |
+=========`
+];
+
+let chosenWord = wordList[Math.floor(Math.random() * wordList.length)];
+let display = chosenWord.split('').map(ch => ch === ' ' ? ' ' : '_');
+let lives = 6;
+let guessedLetters = [];
+
+const wordDisplay = document.getElementById('wordDisplay');
+const stagesDiv = document.getElementById('stages');
+const livesDiv = document.getElementById('lives');
+const messageDiv = document.getElementById('message');
+const lettersDiv = document.getElementById('letters');
+
+function updateDisplay() {
+  wordDisplay.innerHTML = '';
+  display.forEach(ch => {
+    const slot = document.createElement('span');
+    if (ch === ' ') {
+      slot.classList.add('space-slot');
+      slot.textContent = ' ';
+    } else {
+      slot.classList.add('letter-slot');
+      slot.textContent = ch;
+    }
+    wordDisplay.appendChild(slot);
+  });
+  stagesDiv.textContent = stages[lives];
+  livesDiv.textContent = `Lives: ${lives}/6`;
+}
+
+function checkLetter(letter) {
+  if (guessedLetters.includes(letter)) {
+    messageDiv.textContent = `You already guessed '${letter.toUpperCase()}'`;
+    return;
+  }
+
+  guessedLetters.push(letter);
+
+  if (chosenWord.includes(letter)) {
+    for (let i = 0; i < chosenWord.length; i++) {
+      if (chosenWord[i] === letter) display[i] = letter;
+    }
+    messageDiv.textContent = 'Good guess!';
+  } else {
+    lives--;
+    messageDiv.textContent = `Wrong guess! '${letter.toUpperCase()}' is not in the name.`;
+  }
+
+  updateDisplay();
+
+  if (!display.includes('_')) {
+    messageDiv.textContent = '🎉 YOU WIN! ⚽';
+    disableLetters();
+  } else if (lives === 0) {
+    messageDiv.textContent = `💀 YOU LOSE! The player was: ${chosenWord}`;
+    display = chosenWord.split('');
+    updateDisplay();
+    disableLetters();
+  }
+}
+
+function disableLetters() {
+  document.querySelectorAll('button.letter').forEach(btn => btn.disabled = true);
+}
+
+function createLetterButtons() {
+  const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+  alphabet.split('').forEach(letter => {
+    const btn = document.createElement('button');
+    btn.textContent = letter;
+    btn.classList.add('letter');
+    btn.onclick = () => checkLetter(letter);
+    lettersDiv.appendChild(btn);
+  });
+}
+
+createLetterButtons();
+updateDisplay();
+</script>
+
+</body>
+</html>
