@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>⚽ Football Hangman</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+  body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background: radial-gradient(circle at top, #0a0f24, #1a1f3c);
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  #gameContainer {
+    background: rgba(255,255,255,0.05);
+    padding: 30px 40px;
+    border-radius: 25px;
+    max-width: 700px;
+    width: 90%;
+    box-shadow: 0 0 50px #00d4ff66;
+    text-align: center;
+    backdrop-filter: blur(10px);
+  }
+
+  h1 {
+    color: #00d4ff;
+    font-size: 2.2em;
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px #00d4ff, 0 0 20px #00d4ff66;
+  }
+
+  #stages {
+    font-family: monospace;
+    font-size: 1.2em;
+    white-space: pre;
+    margin-bottom: 20px;
+    line-height: 1.2em;
+    color: #00ffe1;
+    text-shadow: 0 0 5px #00ffe1;
+  }
+
+  #wordDisplay {
+    font-size: 2em;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  .letter-slot {
+    display: inline-block;
+    width: 30px;
+    margin: 0 5px;
+    border-bottom: 3px solid #00d4ff;
+    text-transform: uppercase;
+    font-weight: bold;
+    transition: all 0.2s;
+  }
+
+  .space-slot {
+    width: 20px;
+    margin: 0 5px;
+  }
+
+  #lives {
+    font-size: 1.2em;
+    margin-bottom: 15px;
+    color: #ff6b6b;
+    text-shadow: 0 0 5px #ff6b6b;
+  }
+
+  #message {
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+    min-height: 1.2em;
+    color: #fff200;
+    text-shadow: 0 0 5px #fff200;
+  }
+
+  #letters {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+
+  button.letter {
+    margin: 5px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #00d4ff;
+    border: none;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.15s;
+    text-transform: uppercase;
+    box-shadow: 0 0 10px #00d4ff66;
+  }
+
+  button.letter:hover:not(:disabled) {
+    background: #00a6c7;
+    box-shadow: 0 0 15px #00a6c7;
+  }
+
+  button.letter:disabled {
+    background: #555;
+    cursor: default;
+    box-shadow: none;
+  }
+
+  #hintBtn {
+    margin-top: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #ffd166;
+    border: none;
+    font-weight: 600;
+    color: #1b1b1b;
+    cursor: pointer;
+    box-shadow: 0 0 8px #ffd16666;
+    margin-right: 8px;
+  }
+
+  #hintBtn:disabled {
+    background: #bfbfbf;
+    cursor: default;
+    box-shadow: none;
+  }
+
+  #playBtn {
+    margin-top: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #6be56b;
+    border: none;
+    font-weight: 600;
+    color: #072;
+    cursor: pointer;
+    box-shadow: 0 0 8px #6be56b55;
+  }
+
+  #playBtn:disabled {
+    background: #9fd79f;
+    cursor: default;
+    box-shadow: none;
+  }
+
+  #hint {
+    margin-top: 10px;
+    color: #bde0fe;
+    font-weight: 600;
+    min-height: 1.2em;
+  }
+
+  #footer {
+    margin-top: 12px;
+    font-size: 0.9em;
+    color: #9fb9ff88;
+  }
+</style>
+</head>
+<body>
+
+<div id="gameContainer">
+  <h1>⚽ Football Hangman</h1>
+  <div id="stages"></div>
+  <div id="wordDisplay" aria-live="polite"></div>
+  <div id="lives"></div>
+  <div id="message" role="status" aria-live="polite"></div>
+  <div id="letters" role="group" aria-label="letters"></div>
+
+  <div>
+    <button id="hintBtn">Show Hint</button>
+    <button id="playBtn">Play Again</button>
+  </div>
+
+  <div id="hint"></div>
+  <div id="footer">Hint shows automatically when you are low on lives.</div>
+</div>
+
+<script>
+/*
+  Updated:
+  - Added Play Again button to reset the game state.
+  - Reset re-selects a word, clears guesses, re-enables letter buttons and hint button,
+    and resets lives/display/message/hint.
+*/
+
+const wordList = [
+  // Young & rising stars (added)
+  'pablo gavi',
+  'endrick felipe',
+  'rayan cherki',
+  'nico williams',
+  'jarell quansah',
+  'fabio miretti',
+  'alejandro garnacho',
+
+  // Established & well-known players
+  'kylian mbappe',
+  'erling haaland',
+  'bukayo saka',
+  'jamal musiala',
+  'jude bellingham',
+  'pedri gonzalez',
+  'ansu fati',
+  'aurelien tchouameni',
+  'xavi simons',
+  'florian wirtz',
+  'eduardo camavinga',
+  'rafael leao',
+  'alejandro balde',
+  'federico valverde',
+  'lautaro martinez',
+  'lamine yamal',
+  'cole palmer',
+  'michael olise',
+  'lionel messi',
+  'cristiano ronaldo',
+  'bruno fernandes',
+  'kevin de bruyne',
+  'virgil van dijk',
+  'mohamed salah',
+  'karim benzema',
+  'sergio ramos',
+  'david beckham',
+  'zinedine zidane',
+  'ronaldinho gaucho',
+  'ronaldo nazario',
+  'thierry henry',
+  'paolo maldini',
+  'roberto carlos',
+  'gianluigi buffon',
+  'andres iniesta',
+  'xavi hernandez',
+  'diego maradona',
+  'johan cruyff',
+  'vinicius junior',
+  'trent alexander-arnold',
+  'thibaut courtois',
+  'antonio rudiger',
+  'david alaba',
+  'raphinha',
+  'marcus rashford',
+  'joao felix',
+  'ousmane dembele',
+  'achraf hakimi',
+  'marquinhos',
+  'gianluigi donnarumma',
+  'marco verratti',
+  'matthijs de ligt',
+  'alphonso davies',
+  'serge gnabry',
+  'leroy sane',
+  'joshua kimmich',
+  'thomas muller',
+  'manuel neuer',
+  'julian brandt',
+  'mats hummels',
+  'marco reus',
+  'luis diaz',
+  'alisson becker',
+  'darwin nunez',
+  'fabinho',
+  'phil foden',
+  'bernardo silva',
+  'ederson',
+  'rodri',
+  'paulo dybala',
+  'dusan vlahovic',
+  'federico chiesa',
+  'nicolo barella',
+  'milan skriniar',
+  'theo hernandez',
+  'sandro tonali',
+  'mike maignan'
+];
+
+// Short hints for players. Keys must exactly match strings from wordList.
+const hints = {
+  "alejandro balde": "Spanish full-back — known for wing-back bursts on the far-left flank in Catalonia’s red-and-blue shirt.",
+  "alejandro garnacho": "Argentinian winger — cut-inside maestro at London’s re-building Blues club, dangerous on the break.",
+  "alisson becker": "Brazilian goalkeeper — shot-stopper for the Reds by the Mersey, rarely beaten in big matches.",
+  "andres iniesta": "Spanish midfield legend — midfield magician whose legacy shines in Spain and beyond.",
+  "ansu fati": "Spanish forward — young talent on loan, trying to rediscover his flair’s old spark at a fresh club.",
+  "antonio conte": "Italian manager — the tactician behind legendary defensive units and intense formations.",
+  "aurelien tchouameni": "French defensive midfielder — shield-bearer in the Spanish capital’s midfield engine.",
+  "bruno fernandes": "Portuguese playmaker — key creative spark in Manchester’s red half, often pulling strings late on.",
+  "bukayo saka": "English winger — versatile attacker for North London’s Gunners, known for calm finishing and pace.",
+  "cole palmer": "English attacker — stylish creator now plying his trade in London’s West End blue colours.",
+  "cristiano ronaldo": "Portuguese icon — global star lighting up the desert leagues with flair and legendary fitness.",
+  "darwin nunez": "Uruguayan striker — explosive forward now testing himself in the Middle East’s top tier.",
+  "david beckham": "English legend — free-kick specialist turned club-owner, always involved in football’s global scene.",
+  "eduardo camavinga": "French midfielder — versatile engine in the Spanish capital, blending youthful energy with steel.",
+  "endrick felipe": "Brazilian wonderkid — rising forward in Madrid, touted as a future superstar.",
+  "erling haaland": "Norwegian striker — unstoppable goal machine for Manchester’s sky-blue side.",
+  "fabinho": "Brazilian defensive midfielder — anchorman in the Saudi top flight, bringing experience and grit.",
+  "fabio miretti": "Italian central midfielder — tidy link-up player for the Bianconeri when called upon.",
+  "federico chiesa": "Italian winger / forward — once explosive on the flanks; fitness now the key to comebacks in Turin.",
+  "federico valverde": "Uruguayan box-to-box midfielder — his long-range engines power the Spanish capital’s rhythm.",
+  "florian wirtz": "German attacking midfielder — creative spark for the Reds on Merseyside, making defenders dance.",
+  "gianluigi buffon": "Italian goalkeeping legend — age may show, but his aura and legacy remain timeless.",
+  "gerard piqué": "Spanish centre-back — once rock at the Catalan giant’s back line, known for calm ball-playing defence.",
+  "hakim ziyech": "Moroccan winger — now adding flair and deadly left-foot shots in Turkey’s top division.",
+  "jamal musiala": "German dribbler — gliding forward in Bavaria, blending flair and youth with top-level pressure.",
+  "jarell quansah": "English centre-back — promising young defender adjusting to life in Germany’s top league.",
+  "jude bellingham": "English midfield phenom — engine and creative spark in Madrid’s midfield, with star status.",
+  "karim benzema": "French striker — retired superstar whose finishing and vision defined a generation.",
+  "kevin de bruyne": "Belgian playmaker — maestro of Messi-like passes, now crafting midfield magic under new skies.",
+  "kylian mbappe": "French forward — lightning winger turned Madrid’s sharpest attacking weapon.",
+  "lamine yamal": "Spanish teenage winger — rising talent at Catalonia’s famed academy, dazzling with raw ability.",
+  "lautaro martinez": "Argentinian striker — determined No. 9 leading Inter’s line with hunger and precision.",
+  "leonardo bonucci": "Italian centre-back — veteran leader whose calm positioning and vision stood firm over decades.",
+  "lionel messi": "Argentinian legend — creative genius whose dribbling and vision reshaped modern football.",
+  "luis diaz": "Colombian winger — pacey wide-man tearing down Bayern’s flanks with flair and directness.",
+  "michael olise": "French-English winger — skillful creator who recently switched to Bavaria, challenging defenders anew.",
+  "mike maignan": "French goalkeeper — Milan’s first-choice shot-stopper, known for reflexes and strong presence.",
+  "milan skriniar": "Slovakian centre-back — robust defender now anchoring a Parisian back-line in Europe’s elite league.",
+  "mohamed salah": "Egyptian right-winger — deadly on the counter, famed for cutting inside onto his left and curling home shots.",
+  "nico williams": "Spanish winger — lightning-quick wide-man whose bursts of speed trouble even the best full-backs.",
+  "nicolo barella": "Italian midfielder — midfield dynamo in Milan, combining grit, skill and tactical awareness.",
+  "paolo maldini": "Italian defensive legend — embodiment of loyalty and class at one of Italy’s most storied clubs.",
+  "paulo dybala": "Argentinian forward — crafty attacker known for curling finishes and flair, now plying trade in Italy’s capital.",
+  "pedri gonzalez": "Spanish playmaker — calm midfielder weaving passes for Catalonia’s star-studded squad.",
+  "rafael leao": "Portuguese wide-forward — gifted attacker sprinting down Milan’s left flank with grace and power.",
+  "rayan cherki": "French dribbler — unpredictable winger trying to recapture his spark at a historic English club.",
+  "richarlison": "Brazilian forward — physical and energetic striker battling among Tottenham’s front-line options.",
+  "roberto carlos": "Brazilian full-back — legendary for a bending outside-the-boot free-kick and fearless overlapping runs.",
+  "ronaldinho gaucho": "Brazilian showman — magician of tricks and flair whose smile lit up stadiums worldwide.",
+  "ronaldo nazario": "Brazilian ‘El Fenómeno’ — pure striker instinct and explosive pace at his prime made defenders tremble.",
+  "sandro tonali": "Italian midfielder — classic regista now plying his trade in England, dictating play with composure.",
+  "sergio ramos": "Spanish defender — warrior centre-back famous for clutch headers and fiery temperament.",
+  "theo hernandez": "French full-back — explosive left-back bursting forward on AC Milan’s flanks with blistering runs.",
+  "thierry henry": "French forward — elegant finisher who defined a generation with pace and composure on the left.",
+  "trent alexander-arnold": "English right-back — world-class passer from deep, now featuring in Madrid’s defensive rebuild.",
+  "victor osimhen": "Nigerian striker — soaring attacker known for aerial power and physical presence in Napoli’s front-line.",
+  "vinicius junior": "Brazilian winger — dazzling dribbler and pace merchant consistently terrorizing defences in white.",
+  "virgil van dijk": "Dutch centre-back — commanding defender famous for calm dominance and perfect timing.",
+  "xavi hernandez": "Spanish midfield master turned manager — still obsessed with ball-control and tactical triangles.",
+  "xavi simons": "Dutch attacking midfielder — creative spark recently transplanted to England, dangerous between the lines.",
+  "zinedine zidane": "French legend — midfield elegance remembered for lethal volleys and tactical brilliance."
+  "johan bakayoko":  "Belgian winger/forward — pacey attacker now challenging defenders in Germany’s top flight after a big summer move.",
+  "joao neves":      "Portuguese midfield prodigy — midfield dynamo at a major French club, already earning caps for his national team.",
+  "noni madueke":    "English winger — energetic wide‑man now plying his trade in London’s senior top‑flight, dangerous on the break.",
+  "eberechi eze":    "English attacking midfielder — skilful creator recently returning to his boyhood London club’s first team.",
+  "warren zaïre-emery": "French central midfield youngster — controlling play with maturity beyond his years at a big European club.",
+  "mathys tel":      "French forward — young striker breaking into the senior squad of a top European side, known for bursts of speed.",
+  "miles lewis-skelly": "English defender/wing‑back — promising young talent at a top English club, beginning to show up in first-team squads.",
+  "estevao willian":   "Brazilian forward — flair‑filled attacker, now trying to impress in Europe’s senior competitions.",  
+  "benjamin šoško":       "Slovenian striker — tall, powerful forward breaking through in Germany with real physical presence.",  
+  "jamal musiala":        "German attacker/midfielder — dribbling wizard combining youth and elite‑level calm.",  
+  "ar​da guler":           "Turkish‑born forward/midfielder — young spark in a top Spanish side, offering dribbling and vision.",  
+  "miles lewis‑skelly":   "English left‑back/wing‑back — breakout youngster showing up in senior match‑day squads, catching eyes.",  
+  "kendrey paez":         "Ecuadorian winger/forward — young, quick attacker already appearing in first-team lineups in 2025.",  
+  "kobbie mainoo":        "English midfield diamond — energetic, creative box‑to‑box talent breaking through in top flight.",  
+  "rico lewis":           "English defender/wing‑back — versatile young talent combining defensive solidity with attacking runs.",  
+  "pablo c﻿ubarsí":       "Spanish centre‑back — young defender at a top club, blending composure with potential.",  
+  "dean huijsen":         "Dutch‑Spanish centre‑back — tall, commanding defender breaking through in senior football in 2025.",  
+  "pau cubarsi":          "Spanish defender — emerging youth‑to‑senior transition player breaking into top‑tier defense.",  
+  "jobe bellingham":  "English midfield‑engine — 19‑year‑old now wearing black & yellow, already proving himself in Bundesliga midfield battles.",
+  "senny mayulu":     "French young midfielder — rising talent reportedly in senior rotation for a top French club, eyes on the future.",
+};
+
+
+
+
+const stages = [
+`  +---+
+  |   |
+  O   |
+ /|\\  |
+ / \\  |
+      |
+=========`,
+`  +---+
+  |   |
+  O   |
+ /|\\  |
+ /    |
+      |
+=========`,
+`  +---+
+  |   |
+  O   |
+ /|\\  |
+      |
+      |
+=========`,
+`  +---+
+  |   |
+  O   |
+ /|   |
+      |
+      |
+=========`,
+`  +---+
+  |   |
+  O   |
+  |   |
+      |
+      |
+=========`,
+`  +---+
+  |   |
+  O   |
+      |
+      |
+      |
+=========`,
+`  +---+
+  |   |
+      |
+      |
+      |
+      |
+=========`
+];
+
+let chosenWord;
+let display;
+let lives;
+let guessedLetters = [];
+let hintShown = false;
+
+const wordDisplay = document.getElementById('wordDisplay');
+const stagesDiv = document.getElementById('stages');
+const livesDiv = document.getElementById('lives');
+const messageDiv = document.getElementById('message');
+const lettersDiv = document.getElementById('letters');
+const hintBtn = document.getElementById('hintBtn');
+const hintDiv = document.getElementById('hint');
+const playBtn = document.getElementById('playBtn');
+
+function pickWord() {
+  return wordList[Math.floor(Math.random() * wordList.length)];
+}
+
+function initGame() {
+  chosenWord = pickWord();
+  display = chosenWord.split('').map(ch => ch === ' ' ? ' ' : '_');
+  lives = 6;
+  guessedLetters = [];
+  hintShown = false;
+  hintDiv.textContent = '';
+  hintBtn.disabled = false;
+  messageDiv.textContent = '';
+  enableAllLetterButtons();
+  updateDisplay();
+
+  // Uncomment to see the chosen word for debugging:
+  // console.log('Chosen player:', chosenWord);
+}
+
+function updateDisplay() {
+  wordDisplay.innerHTML = '';
+  display.forEach(ch => {
+    const slot = document.createElement('span');
+    if (ch === ' ') {
+      slot.classList.add('space-slot');
+      slot.textContent = ' ';
+    } else {
+      slot.classList.add('letter-slot');
+      slot.textContent = ch;
+    }
+    wordDisplay.appendChild(slot);
+  });
+  stagesDiv.textContent = stages[lives];
+  livesDiv.textContent = `Lives: ${lives}/6`;
+}
+
+function revealHint() {
+  if (hintShown) return;
+  hintShown = true;
+  hintBtn.disabled = true;
+  const h = hints[chosenWord];
+  hintDiv.textContent = h ? h : 'No hint available for this player.';
+}
+
+hintBtn.addEventListener('click', revealHint);
+playBtn.addEventListener('click', resetGame);
+
+function checkLetter(letter) {
+  if (guessedLetters.includes(letter)) {
+    messageDiv.textContent = `You already guessed '${letter.toUpperCase()}'`;
+    return;
+  }
+
+  guessedLetters.push(letter);
+
+  if (chosenWord.includes(letter)) {
+    for (let i = 0; i < chosenWord.length; i++) {
+      if (chosenWord[i] === letter) display[i] = letter;
+    }
+    messageDiv.textContent = 'Good guess!';
+  } else {
+    lives--;
+    messageDiv.textContent = `Wrong guess! '${letter.toUpperCase()}' is not in the name.`;
+  }
+
+  // Auto-show hint when player is low on lives
+  if (!hintShown && lives <= 2) {
+    revealHint();
+  }
+
+  updateDisplay();
+
+  if (!display.includes('_')) {
+    messageDiv.textContent = '🎉 YOU WIN! ⚽';
+    disableLetters();
+  } else if (lives === 0) {
+    messageDiv.textContent = `💀 YOU LOSE! The player was: ${chosenWord}`;
+    display = chosenWord.split('');
+    updateDisplay();
+    disableLetters();
+  }
+}
+
+function disableLetters() {
+  document.querySelectorAll('button.letter').forEach(btn => btn.disabled = true);
+  hintBtn.disabled = true;
+}
+
+function enableAllLetterButtons() {
+  document.querySelectorAll('button.letter').forEach(btn => {
+    btn.disabled = false;
+  });
+}
+
+function createLetterButtons() {
+  const alphabet = 'abcdefghijklmnopqrstuvwxyz-';
+  alphabet.split('').forEach(letter => {
+    const btn = document.createElement('button');
+    btn.textContent = letter;
+    btn.classList.add('letter');
+    btn.onclick = () => { btn.disabled = true; checkLetter(letter); };
+    lettersDiv.appendChild(btn);
+  });
+}
+
+function resetGame() {
+  // Re-enable buttons and re-init game state
+  enableAllLetterButtons();
+  initGame();
+}
+
+createLetterButtons();
+initGame();
+
+// For debugging you can uncomment the line below to see the chosen word in console
+// console.log('Chosen player:', chosenWord);
+</script>
+
+</body>
+</html>
